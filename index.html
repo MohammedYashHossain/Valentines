@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cinematic Valentine</title>
+
+  <!--
+    A tiny cinematic love letter 💖
+    Single-file HTML (CSS + JS embedded)
+    Assets expected in:
+      /assets/sounds/
+      /assets/icons/
+  -->
+
+  <style>
+    :root{
+      --bg1:#ff9a9e;
+      --bg2:#fad0c4;
+      --bg3:#fbc2eb;
+      --glass: rgba(255,255,255,.16);
+      --glass2: rgba(255,255,255,.10);
+      --text: rgba(255,255,255,.96);
+      --shadow: 0 18px 55px rgba(0,0,0,.22);
+      --shadowSoft: 0 12px 35px rgba(0,0,0,.16);
+      --accent: #ff4d8d;
+      --accent2: #ff2e72;
+      --ok: #ff2e72;
+      --ease: cubic-bezier(.2,.9,.2,1);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin:0;
+      overflow:hidden;
+      color: var(--text);
+      font-family: ui-rounded, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: linear-gradient(270deg, var(--bg1), var(--bg2), var(--bg3));
+      background-size: 700% 700%;
+      animation: bgMove 18s ease infinite;
+    }
+
+    @keyframes bgMove{
+      0%{ background-position: 0% 50%; }
+      50%{ background-position: 100% 50%; }
+      100%{ background-position: 0% 50%; }
+    }
+
+    /* subtle film grain + vignette */
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(255,255,255,.10), transparent 55%),
+        radial-gradient(circle at 50% 120%, rgba(0,0,0,.22), transparent 60%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.02), rgba(255,255,255,.02) 1px, transparent 1px, transparent 3px);
+      mix-blend-mode: overlay;
+      opacity:.55;
+      pointer-events:none;
+      z-index:0;
+    }
+
+    /* global particles layer */
+    #particles{
+      position:fixed; inset:0;
+      pointer-events:none;
+      z-index:1;
+      overflow:hidden;
+    }
+    .p{
+      position:absolute;
+      opacity:.14;
+      filter: blur(.2px);
+      transform: translate3d(0,0,0);
+      will-change: transform, opacity;
+    }
+    .p.heart::before{
+      content:"❤";
+      font-size: 18px;
+      text-shadow: 0 10px 18px rgba(0,0,0,.10);
+    }
+    .p.spark::before{
+      content:"✦";
+      font-size: 16px;
+      text-shadow: 0 10px 18px rgba(0,0,0,.10);
+    }
+
+    /* sound toggle */
+    #soundToggle{
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 50;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.26);
+      background: rgba(255,255,255,.12);
+      color: var(--text);
+      box-shadow: var(--shadowSoft);
+      cursor:pointer;
+      user-select:none;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      transition: transform .25s var(--ease), background .25s var(--ease);
+    }
+    #soundToggle:hover{ transform: translateY(-1px) scale(1.02); background: rgba(255,255,255,.16); }
+    #soundToggle .tiny{ opacity:.85; font-size:12px; }
+
+    /* app container */
+    #app{
+      position:relative;
+      z-index:2;
+      height:100%;
+      display:grid;
+      place-items:center;
+    }
+
+    /* screens */
+    .screen{
+      position:absolute; inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 24px;
+      opacity:0;
+      transform: scale(.96);
+      pointer-events:none;
+      transition: opacity .75s var(--ease), transform .75s var(--ease);
+    }
+    .screen.active{
+      opacity:1;
+      transform: scale(1);
+      pointer-events:auto;
+    }
+
+    .panel{
+      width:min(860px, 92vw);
+      border-radius: 26px;
+      padding: 34px 28px 28px;
+      background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.10));
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      position:relative;
+      overflow:hidden;
+    }
+    .panel::after{
+      content:"";
+      position:absolute; inset:-2px;
+      background: radial-gradient(circle at 20% 10%, rgba(255,255,255,.22), transparent 40%),
+                  radial-gradient(circle at 90% 30%, rgba(255,255,255,.12), transparent 45%);
+      pointer-events:none;
+      opacity:.75;
+    }
+
+    h1{
+      margin:0 0 12px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.07;
+      font-size: clamp(28px, 4.6vw, 52px);
+      text-shadow: 0 16px 40px rgba(0,0,0,.18);
+    }
+
+    .sub{
+      margin: 8px 0 0;
+      opacity:.92;
+      font-size: 14px;
+    }
+
+    .buttons{
+      display:flex;
+      gap: 14px;
+      flex-wrap:wrap;
+      margin-top: 22px;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      padding: 14px 20px;
+      border-radius: 999px;
+      font-weight: 700;
+      letter-spacing: .01em;
+      cursor:pointer;
+      background: rgba(255,255,255,.22);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.26);
+      box-shadow: 0 14px 32px rgba(0,0,0,.12);
+      transition: transform .22s var(--ease), box-shadow .22s var(--ease), background .22s var(--ease);
+      transform: translate3d(0,0,0);
+      will-change: transform;
+      position:relative;
+      overflow:hidden;
+    }
+    .btn:hover{
+      transform: translateY(-2px) scale(1.03);
+      background: rgba(255,255,255,.26);
+      box-shadow: 0 18px 40px rgba(0,0,0,.16);
+    }
+    .btn:active{ transform: translateY(0) scale(.99); }
+
+    .floaty{
+      animation: floaty 2.6s ease-in-out infinite;
+    }
+    @keyframes floaty{
+      0%,100%{ transform: translateY(0); }
+      50%{ transform: translateY(-8px); }
+    }
+
+    .glow{
+      box-shadow:
+        0 18px 40px rgba(0,0,0,.16),
+        0 0 0 1px rgba(255,255,255,.18),
+        0 0 26px rgba(255,77,141,.25);
+    }
+
+    /* typewriter-ish */
+    #nameResult{
+      margin: 18px 0 0;
+      min-height: 38px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      opacity: .0;
+      transform: translateY(6px);
+      transition: opacity .45s var(--ease), transform .45s var(--ease);
+      text-shadow: 0 16px 36px rgba(0,0,0,.16);
+    }
+    #nameResult.show{
+      opacity:1;
+      transform: translateY(0);
+    }
+    .caret{
+      display:inline-block;
+      width: 10px;
+      animation: blink 1s steps(1) infinite;
+      opacity:.8;
+    }
+    @keyframes blink{ 50%{ opacity:0; } }
+
+    /* Screen 2: skyline */
+    .cityWrap{
+      width:min(980px, 96vw);
+      height:min(560px, 70vh);
+      border-radius: 26px;
+      border: 1px solid rgba(255,255,255,.22);
+      background: linear-gradient(180deg, rgba(9,10,25,.18), rgba(255,255,255,.07));
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      overflow:hidden;
+      position:relative;
+    }
+
+    .stars{
+      position:absolute; inset:0;
+      background:
+        radial-gradient(circle at 12% 18%, rgba(255,255,255,.65) 0 1px, transparent 2px),
+        radial-gradient(circle at 22% 32%, rgba(255,255,255,.55) 0 1px, transparent 2px),
+        radial-gradient(circle at 38% 12%, rgba(255,255,255,.45) 0 1px, transparent 2px),
+        radial-gradient(circle at 66% 20%, rgba(255,255,255,.55) 0 1px, transparent 2px),
+        radial-gradient(circle at 78% 34%, rgba(255,255,255,.45) 0 1px, transparent 2px),
+        radial-gradient(circle at 88% 16%, rgba(255,255,255,.60) 0 1px, transparent 2px);
+      opacity:.55;
+      filter: blur(.2px);
+      animation: twinkle 6s ease-in-out infinite;
+    }
+    @keyframes twinkle{
+      0%,100%{ opacity:.42; }
+      50%{ opacity:.62; }
+    }
+
+    .cloud{
+      position:absolute;
+      top: 16%;
+      left: -30%;
+      width: 55%;
+      height: 26%;
+      background: radial-gradient(circle at 30% 70%, rgba(255,255,255,.20), transparent 55%),
+                  radial-gradient(circle at 60% 40%, rgba(255,255,255,.16), transparent 60%),
+                  radial-gradient(circle at 78% 72%, rgba(255,255,255,.14), transparent 62%);
+      filter: blur(10px);
+      opacity:.65;
+      animation: cloudDrift 18s linear infinite;
+    }
+    .cloud.c2{
+      top: 26%;
+      width: 65%;
+      height: 30%;
+      opacity:.55;
+      animation-duration: 26s;
+      animation-delay: -9s;
+    }
+    @keyframes cloudDrift{
+      from{ transform: translateX(0); }
+      to{ transform: translateX(220%); }
+    }
+
+    .parallax{
+      position:absolute; inset:0;
+      transform: translate3d(0,0,0);
+      will-change: transform;
+    }
+
+    .skyline{
+      position:absolute;
+      left:0; right:0;
+      bottom: 0;
+      height: 42%;
+      background:
+        linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.20)),
+        repeating-linear-gradient(90deg,
+          rgba(255,255,255,.12) 0 2px,
+          transparent 2px 14px);
+      clip-path: polygon(
+        0% 100%,
+        0% 60%,
+        6% 60%,
+        6% 42%,
+        14% 42%,
+        14% 68%,
+        22% 68%,
+        22% 34%,
+        30% 34%,
+        30% 58%,
+        38% 58%,
+        38% 30%,
+        48% 30%,
+        48% 68%,
+        56% 68%,
+        56% 40%,
+        64% 40%,
+        64% 64%,
+        72% 64%,
+        72% 36%,
+        82% 36%,
+        82% 66%,
+        90% 66%,
+        90% 46%,
+        100% 46%,
+        100% 100%
+      );
+      opacity:.62;
+      filter: drop-shadow(0 22px 40px rgba(0,0,0,.20));
+    }
+
+    .statue{
+      position:absolute;
+      bottom: 10%;
+      left: 18%;
+      width: 200px;
+      height: 320px;
+      opacity:.80;
+      transform: translateZ(0);
+      filter: drop-shadow(0 26px 35px rgba(0,0,0,.22));
+    }
+    .statue::before{
+      content:"";
+      position:absolute; inset:0;
+      background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06));
+      clip-path: polygon(
+        46% 0%,
+        54% 0%,
+        60% 10%,
+        56% 12%,
+        62% 20%,
+        56% 22%,
+        62% 32%,
+        54% 34%,
+        58% 54%,
+        68% 64%,
+        66% 72%,
+        58% 66%,
+        56% 100%,
+        44% 100%,
+        42% 66%,
+        34% 72%,
+        32% 64%,
+        42% 54%,
+        46% 34%,
+        38% 32%,
+        44% 22%,
+        38% 20%,
+        44% 12%,
+        40% 10%
+      );
+      border-radius: 12px;
+    }
+    .torch{
+      position:absolute;
+      top: 8px;
+      left: 60%;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,215,120,.95), rgba(255,140,70,.55), transparent 70%);
+      filter: blur(.2px);
+      animation: torchPulse 1.8s ease-in-out infinite;
+      opacity:.95;
+    }
+    @keyframes torchPulse{
+      0%,100%{ transform: scale(1); opacity:.88; }
+      50%{ transform: scale(1.18); opacity:1; }
+    }
+
+    .cityText{
+      position:absolute;
+      top: 18px; left: 18px; right: 18px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      pointer-events:none;
+      opacity:.92;
+      text-shadow: 0 16px 40px rgba(0,0,0,.24);
+    }
+    .cityText .title{
+      font-weight:900;
+      letter-spacing:-.02em;
+      font-size: clamp(18px, 3vw, 28px);
+    }
+    .cityText .hint{
+      opacity:.82;
+      font-size: 12px;
+      max-width: 280px;
+      text-align:right;
+    }
+
+    .nextBtn{
+      position:absolute;
+      bottom: 18px;
+      right: 18px;
+      z-index:3;
+      animation: gentlePulse 1.8s ease-in-out infinite;
+    }
+    @keyframes gentlePulse{
+      0%,100%{ transform: scale(1); }
+      50%{ transform: scale(1.04); }
+    }
+
+    /* Screen 3 chat bubble */
+    #chatBubble{
+      margin-top: 18px;
+      display:none;
+      max-width: 560px;
+      background: rgba(255,255,255,.22);
+      border: 1px solid rgba(255,255,255,.26);
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: var(--shadowSoft);
+      font-weight:800;
+      letter-spacing: -.01em;
+      transform: scale(.7);
+      opacity:0;
+      transform-origin: 20% 100%;
+    }
+    #chatBubble.show{
+      display:block;
+      animation: popElastic .62s var(--ease) forwards;
+    }
+    @keyframes popElastic{
+      0%{ transform: scale(.65); opacity:0; }
+      60%{ transform: scale(1.06); opacity:1; }
+      100%{ transform: scale(1); opacity:1; }
+    }
+
+    /* Transition screen: roses/hearts */
+    .transitionScene{
+      position:absolute; inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      overflow:hidden;
+    }
+    .bloom{
+      position:absolute; inset:-40px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.26), transparent 45%),
+                  radial-gradient(circle at 70% 40%, rgba(255,77,141,.22), transparent 48%),
+                  radial-gradient(circle at 40% 70%, rgba(255,255,255,.18), transparent 50%);
+      filter: blur(10px);
+      opacity:.85;
+      animation: bloomBreath 2.6s ease-in-out infinite;
+    }
+    @keyframes bloomBreath{
+      0%,100%{ transform: scale(1); opacity:.78; }
+      50%{ transform: scale(1.04); opacity:.92; }
+    }
+    .rosePetal{
+      position:absolute;
+      top:-10%;
+      opacity:.85;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.12));
+      animation: petalFall linear infinite;
+      will-change: transform;
+    }
+    .rosePetal::before{
+      content:"🌹";
+      font-size: 22px;
+    }
+    @keyframes petalFall{
+      from{ transform: translate3d(var(--x), -10vh, 0) rotate(0deg); }
+      to{ transform: translate3d(calc(var(--x) + var(--drift)), 110vh, 0) rotate(280deg); }
+    }
+
+    /* Final screen YES */
+    #yesFinal{
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: 1px solid rgba(255,255,255,.20);
+      box-shadow:
+        0 18px 40px rgba(0,0,0,.18),
+        0 0 30px rgba(255,46,114,.28);
+      animation: heartbeat 1.2s ease-in-out infinite;
+    }
+    @keyframes heartbeat{
+      0%,100%{ transform: scale(1); }
+      20%{ transform: scale(1.05); }
+      35%{ transform: scale(1.00); }
+      55%{ transform: scale(1.07); }
+      70%{ transform: scale(1.00); }
+    }
+
+    /* sparkle burst on hover using pseudo */
+    #yesFinal::after{
+      content:"";
+      position:absolute;
+      inset:-20px;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(255,255,255,.55) 0 2px, transparent 3px),
+        radial-gradient(circle at 70% 25%, rgba(255,255,255,.45) 0 2px, transparent 3px),
+        radial-gradient(circle at 40% 75%, rgba(255,255,255,.50) 0 2px, transparent 3px),
+        radial-gradient(circle at 85% 75%, rgba(255,255,255,.35) 0 2px, transparent 3px);
+      opacity:0;
+      transform: scale(.9);
+      transition: opacity .28s var(--ease), transform .28s var(--ease);
+      pointer-events:none;
+      filter: blur(.2px);
+    }
+    #yesFinal:hover::after{ opacity:1; transform: scale(1); }
+
+    /* NO button (will be moved by JS) */
+    #noFinal{
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.24);
+      opacity:.95;
+    }
+
+    /* YAY screen */
+    #yay .panel{
+      text-align:center;
+      padding: 44px 28px 34px;
+    }
+    #yay h1{
+      font-size: clamp(62px, 10vw, 120px);
+      margin:0;
+      letter-spacing:-.03em;
+      animation: yayPulse 1.1s ease-in-out infinite;
+    }
+    @keyframes yayPulse{
+      0%,100%{ transform: scale(1); }
+      50%{ transform: scale(1.06); }
+    }
+    #yay .cuteRow{
+      margin-top: 18px;
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      flex-wrap:wrap;
+      opacity:.95;
+      font-size: 22px;
+      filter: drop-shadow(0 10px 18px rgba(0,0,0,.12));
+    }
+
+    /* confetti canvas */
+    #confettiCanvas{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      pointer-events:none;
+      z-index:0;
+    }
+
+    /* little floating emojis on yay */
+    .floater{
+      position:absolute;
+      font-size: 22px;
+      opacity:.9;
+      filter: drop-shadow(0 12px 18px rgba(0,0,0,.10));
+      will-change: transform;
+      animation: floatUp 6s linear infinite;
+    }
+    @keyframes floatUp{
+      from{ transform: translate3d(var(--x), 110vh, 0) rotate(0deg); opacity:0; }
+      10%{ opacity:.95; }
+      to{ transform: translate3d(calc(var(--x) + var(--drift)), -20vh, 0) rotate(240deg); opacity:0; }
+    }
+
+    /* responsive */
+    @media (max-width: 520px){
+      .panel{ padding: 28px 18px 18px; border-radius: 22px; }
+      .buttons{ gap: 10px; }
+      .btn{ width:100%; justify-content:center; }
+      .cityText .hint{ display:none; }
+      .statue{ left: 10%; transform: scale(.9); }
+    }
+
+    /* reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Audio (place files in /assets/sounds/) -->
+  <audio id="bgMusic" src="assets/sounds/ambient.mp3" loop preload="auto"></audio>
+  <audio id="hoverSound" src="assets/sounds/hover.mp3" preload="auto"></audio>
+  <audio id="clickSound" src="assets/sounds/click.mp3" preload="auto"></audio>
+  <audio id="sparkleSound" src="assets/sounds/sparkle.mp3" preload="auto"></audio>
+  <audio id="swooshSound" src="assets/sounds/swoosh.mp3" preload="auto"></audio>
+  <audio id="chimeSound" src="assets/sounds/chime.mp3" preload="auto"></audio>
+  <audio id="sadSound" src="assets/sounds/sad.mp3" preload="auto"></audio>
+  <audio id="celebrationSound" src="assets/sounds/celebration.mp3" preload="auto"></audio>
+
+  <button id="soundToggle" aria-label="Sound toggle">
+    <span id="soundIcon">🔊</span>
+    <span class="tiny" id="soundHint">tap to play</span>
+  </button>
+
+  <div id="particles" aria-hidden="true"></div>
+
+  <div id="app">
+    <!-- SCREEN 1 -->
+    <section class="screen active" id="screen1">
+      <div class="panel">
+        <h1>Are you Ansana Arisha Khan</h1>
+        <div class="buttons">
+          <button class="btn floaty glow" data-answer="yes">Yes</button>
+          <button class="btn floaty" data-answer="no">No</button>
+        </div>
+        <p class="sub">Be honest. The universe is watching. ✨</p>
+        <div id="nameResult"></div>
+      </div>
+    </section>
+
+    <!-- SCREEN 2 -->
+    <section class="screen" id="screen2">
+      <div class="cityWrap" aria-hidden="false">
+        <div class="stars"></div>
+        <div class="cloud"></div>
+        <div class="cloud c2"></div>
+
+        <div class="cityText">
+          <div>
+            <div class="title">A lil NYC moment 🗽</div>
+            <div class="sub">cinematic skyline • soft parallax • torch glow</div>
+          </div>
+          <div class="hint">Tip: sound on makes this feel ✨expensive✨</div>
+        </div>
+
+        <div class="parallax" id="parallaxLayer">
+          <div class="skyline"></div>
+          <div class="statue">
+            <div class="torch"></div>
+          </div>
+        </div>
+
+        <button class="btn nextBtn" id="next2">Next</button>
+      </div>
+    </section>
+
+    <!-- SCREEN 3 -->
+    <section class="screen" id="screen3">
+      <div class="panel">
+        <h1>Are you DTF in NYC?</h1>
+        <div class="buttons">
+          <button class="btn" id="optFreak">Are you down to freak?</button>
+          <button class="btn glow" id="optDTF">I cant wait for Din Tai Fung!</button>
+        </div>
+        <div id="chatBubble"></div>
+        <p class="sub">Choose wisely. One path is chaos. One is dumplings. 🥟</p>
+      </div>
+    </section>
+
+    <!-- TRANSITION -->
+    <section class="screen" id="transition">
+      <div class="transitionScene">
+        <div class="bloom"></div>
+        <!-- petals inserted by JS -->
+      </div>
+      <div class="panel" style="position:absolute; bottom:22px; left:50%; transform:translateX(-50%); width:min(680px,92vw); text-align:center; padding:18px 18px; opacity:.88;">
+        <div style="font-weight:900; letter-spacing:-.02em;">romance loading… 💐</div>
+        <div class="sub">roses • hearts • glow • lil music swell</div>
+      </div>
+    </section>
+
+    <!-- FINAL -->
+    <section class="screen" id="final">
+      <div class="panel">
+        <h1>Will you be my Valentine?</h1>
+        <div class="buttons" style="margin-top:26px;">
+          <button class="btn" id="yesFinal">YES</button>
+          <button class="btn" id="noFinal">No ☹️</button>
+        </div>
+        <p class="sub">Be careful. One button is a trap. (Not telling you which.)</p>
+      </div>
+    </section>
+
+    <!-- YAY -->
+    <section class="screen" id="yay">
+      <canvas id="confettiCanvas"></canvas>
+      <div class="panel">
+        <h1>YAY</h1>
+        <div class="cuteRow" aria-hidden="true">
+          <span>🐱</span><span>💖</span><span>🌸</span><span>🐾</span><span>🎉</span><span>🌷</span><span>😽</span><span>✨</span>
+        </div>
+        <p class="sub" style="margin-top:14px;">This is your official notice that you’re loved (and also hilarious).</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ========= Helpers =========
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+    // ========= Screen Manager =========
+    const screens = $$('.screen');
+    let current = 'screen1';
+    function showScreen(id){
+      screens.forEach(s => s.classList.toggle('active', s.id === id));
+      current = id;
+    }
+
+    // ========= Audio Manager (no harsh overlap, balanced) =========
+    const audio = {
+      bg: $('#bgMusic'),
+      hover: $('#hoverSound'),
+      click: $('#clickSound'),
+      sparkle: $('#sparkleSound'),
+      swoosh: $('#swooshSound'),
+      chime: $('#chimeSound'),
+      sad: $('#sadSound'),
+      celebration: $('#celebrationSound'),
+    };
+
+    const soundToggle = $('#soundToggle');
+    const soundIcon = $('#soundIcon');
+    const soundHint = $('#soundHint');
+
+    let soundOn = true;
+    let musicStarted = false;
+
+    function setAudioLevels(){
+      audio.bg.volume = 0.28;
+      audio.hover.volume = 0.18;
+      audio.click.volume = 0.16;
+      audio.sparkle.volume = 0.22;
+      audio.swoosh.volume = 0.20;
+      audio.chime.volume = 0.22;
+      audio.sad.volume = 0.14;
+      audio.celebration.volume = 0.30;
+    }
+    setAudioLevels();
+
+    function safePlay(aud, {restart=true} = {}){
+      if(!soundOn) return;
+      if(restart) aud.currentTime = 0;
+      // play() may fail until user interacts; ignore.
+      aud.play().catch(()=>{});
+    }
+
+    function startMusicIfAllowed(){
+      if(musicStarted) return;
+      musicStarted = true;
+      soundHint.textContent = soundOn ? 'playing' : 'muted';
+      audio.bg.muted = !soundOn;
+      audio.bg.play().catch(()=>{ /* autoplay gate */ });
+    }
+
+    // Start music on first user interaction (mobile-friendly)
+    window.addEventListener('pointerdown', startMusicIfAllowed, {once:true});
+    window.addEventListener('keydown', startMusicIfAllowed, {once:true});
+
+    soundToggle.addEventListener('click', () => {
+      soundOn = !soundOn;
+      audio.bg.muted = !soundOn;
+      soundIcon.textContent = soundOn ? '🔊' : '🔇';
+      soundHint.textContent = soundOn ? (musicStarted ? 'playing' : 'tap to play') : 'muted';
+      safePlay(audio.click);
+    });
+
+    // Global hover/click sounds for buttons
+    document.addEventListener('pointerover', (e) => {
+      const btn = e.target.closest('button');
+      if(!btn) return;
+      safePlay(audio.hover, {restart:true});
+    });
+
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if(!btn) return;
+      safePlay(audio.click, {restart:true});
+    });
+
+    // ========= Global ambient particles (hearts/sparkles) =========
+    const particles = $('#particles');
+    const particleCount = 26;
+    const particleItems = [];
+
+    function spawnParticle(i){
+      const el = document.createElement('div');
+      const isHeart = Math.random() < 0.65;
+      el.className = 'p ' + (isHeart ? 'heart' : 'spark');
+
+      const x = Math.random() * window.innerWidth;
+      const y = Math.random() * window.innerHeight;
+
+      el.style.left = x + 'px';
+      el.style.top  = y + 'px';
+
+      const speed = 0.18 + Math.random()*0.45;
+      const drift = (Math.random()*2 - 1) * 0.35;
+      const wobble = 0.6 + Math.random()*1.2;
+      const size = isHeart ? (14 + Math.random()*16) : (12 + Math.random()*14);
+
+      el.style.opacity = 0.10 + Math.random()*0.10;
+      el.style.transform = `translate3d(0,0,0) scale(${size/18})`;
+
+      particles.appendChild(el);
+      particleItems[i] = { el, x, y, speed, drift, wobble, t: Math.random()*1000, baseSize: size };
+    }
+
+    for(let i=0;i<particleCount;i++) spawnParticle(i);
+
+    let lastT = performance.now();
+    function animateParticles(t){
+      const dt = Math.min(32, t - lastT);
+      lastT = t;
+
+      for(const p of particleItems){
+        p.t += dt * 0.001;
+        p.y -= p.speed * dt;
+        p.x += (Math.sin(p.t * p.wobble) * p.drift) * dt;
+
+        if(p.y < -60){
+          p.y = window.innerHeight + 60;
+          p.x = Math.random() * window.innerWidth;
+        }
+        p.el.style.transform = `translate3d(${p.x}px, ${p.y}px, 0) scale(${p.baseSize/18})`;
+      }
+      requestAnimationFrame(animateParticles);
+    }
+    requestAnimationFrame(animateParticles);
+
+    window.addEventListener('resize', () => {
+      // keep things inside bounds-ish
+      for(const p of particleItems){
+        p.x = clamp(p.x, 0, window.innerWidth);
+        p.y = clamp(p.y, 0, window.innerHeight);
+      }
+    });
+
+    // ========= Screen 1 — Name Check =========
+    const nameResult = $('#nameResult');
+    const nameButtons = $$('[data-answer]');
+    let screen1Locked = false;
+
+    function typeIn(el, text){
+      el.classList.add('show');
+      let i = 0;
+      el.innerHTML = '';
+      const span = document.createElement('span');
+      const caret = document.createElement('span');
+      caret.className = 'caret';
+      caret.textContent = '▌';
+      el.appendChild(span);
+      el.appendChild(caret);
+
+      const timer = setInterval(() => {
+        span.textContent = text.slice(0, i++);
+        if(i > text.length){
+          clearInterval(timer);
+          caret.style.opacity = .0;
+        }
+      }, 28);
+    }
+
+    nameButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(screen1Locked) return;
+        screen1Locked = true;
+
+        const ans = btn.getAttribute('data-answer');
+        const msg = (ans === 'yes')
+          ? "No silly you're Ansana Arisa Khan LOL"
+          : "Correct bc you're Ansana Arisa Khan LOL";
+
+        safePlay(audio.sparkle);
+        typeIn(nameResult, msg);
+
+        // remain visible 8 seconds, then transition
+        setTimeout(() => {
+          safePlay(audio.swoosh);
+          showScreen('screen2');
+          // start airy ambience feel by lightly boosting bg (fake swell)
+          audio.bg.volume = soundOn ? 0.30 : audio.bg.volume;
+        }, 8000);
+      });
+    });
+
+    // ========= Screen 2 — City/Statue Parallax + ambience =========
+    const parallaxLayer = $('#parallaxLayer');
+    let parallaxTargetX = 0, parallaxTargetY = 0;
+    let parallaxX = 0, parallaxY = 0;
+
+    document.addEventListener('pointermove', (e) => {
+      const nx = (e.clientX / window.innerWidth) - 0.5;
+      const ny = (e.clientY / window.innerHeight) - 0.5;
+      parallaxTargetX = nx * 18;
+      parallaxTargetY = ny * 12;
+    });
+
+    function animateParallax(){
+      // smooth damp
+      parallaxX += (parallaxTargetX - parallaxX) * 0.06;
+      parallaxY += (parallaxTargetY - parallaxY) * 0.06;
+      parallaxLayer.style.transform = `translate3d(${parallaxX}px, ${parallaxY}px, 0)`;
+      requestAnimationFrame(animateParallax);
+    }
+    requestAnimationFrame(animateParallax);
+
+    $('#next2').addEventListener('click', () => {
+      safePlay(audio.swoosh);
+      showScreen('screen3');
+    });
+
+    // ========= Screen 3 — NYC Question =========
+    const chatBubble = $('#chatBubble');
+
+    function heartsBurst(count=10){
+      // quick floating hearts near center panel
+      const origin = $('.screen.active .panel') || document.body;
+      const rect = origin.getBoundingClientRect();
+
+      for(let i=0;i<count;i++){
+        const el = document.createElement('div');
+        el.className = 'floater';
+        el.textContent = (Math.random() < 0.85) ? '💖' : '✨';
+
+        const x = (rect.left + rect.width/2) + (Math.random()*120 - 60);
+        const drift = (Math.random()*260 - 130);
+
+        el.style.setProperty('--x', x + 'px');
+        el.style.setProperty('--drift', drift + 'px');
+        el.style.animationDuration = (4.2 + Math.random()*2.4) + 's';
+        el.style.fontSize = (18 + Math.random()*14) + 'px';
+
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 7000);
+      }
+    }
+
+    $('#optFreak').addEventListener('click', () => {
+      chatBubble.textContent = "Im always down";
+      chatBubble.classList.remove('show');
+      void chatBubble.offsetWidth; // restart animation
+      chatBubble.classList.add('show');
+
+      safePlay(audio.sparkle);
+      heartsBurst(14);
+
+      setTimeout(() => {
+        safePlay(audio.swoosh);
+        showScreen('final');
+      }, 1200);
+    });
+
+    // Transition screen petals
+    const transitionScene = $('#transition .transitionScene');
+    function makePetals(){
+      // clear old petals
+      $$('.rosePetal', transitionScene).forEach(p => p.remove());
+      const n = 16;
+      for(let i=0;i<n;i++){
+        const p = document.createElement('div');
+        p.className = 'rosePetal';
+        const x = Math.random()*100;
+        const drift = (Math.random()*240 - 120) + 'px';
+        p.style.setProperty('--x', x + 'vw');
+        p.style.setProperty('--drift', drift);
+        p.style.left = x + 'vw';
+        p.style.animationDuration = (2.4 + Math.random()*1.6) + 's';
+        p.style.animationDelay = (-Math.random()*2.0) + 's';
+        p.style.opacity = (0.55 + Math.random()*0.35).toFixed(2);
+        transitionScene.appendChild(p);
+      }
+    }
+
+    $('#optDTF').addEventListener('click', () => {
+      // romantic chime + roses screen
+      safePlay(audio.chime);
+      makePetals();
+
+      // subtle music swell for transition
+      if(soundOn){
+        const base = 0.28;
+        audio.bg.volume = base;
+        const t0 = performance.now();
+        const swell = () => {
+          const k = clamp((performance.now() - t0)/650, 0, 1);
+          audio.bg.volume = base + 0.10 * (k*(2-k)); // easeOutQuad-ish
+          if(k < 1) requestAnimationFrame(swell);
+        };
+        requestAnimationFrame(swell);
+      }
+
+      showScreen('transition');
+
+      setTimeout(() => {
+        safePlay(audio.swoosh);
+        // return bg to normal
+        if(soundOn) audio.bg.volume = 0.28;
+        showScreen('final');
+      }, 2500);
+    });
+
+    // ========= Final Screen — Valentine Question =========
+    const noBtn = $('#noFinal');
+    const yesBtn = $('#yesFinal');
+
+    // NO button avoidance (smooth easing), impossible to click
+    let noX = 0, noY = 0;
+    let noTX = 0, noTY = 0;
+    let sadPlayed = false;
+
+    function placeNoBtnCenter(){
+      // reset transform for measurements
+      noX = 0; noY = 0; noTX = 0; noTY = 0;
+      noBtn.style.transform = `translate3d(0,0,0)`;
+    }
+    placeNoBtnCenter();
+
+    function animateNoBtn(){
+      noX += (noTX - noX) * 0.10;
+      noY += (noTY - noY) * 0.10;
+      noBtn.style.transform = `translate3d(${noX}px, ${noY}px, 0)`;
+      requestAnimationFrame(animateNoBtn);
+    }
+    requestAnimationFrame(animateNoBtn);
+
+    function repelFromPointer(px, py){
+      const rect = noBtn.getBoundingClientRect();
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+      const dx = cx - px;
+      const dy = cy - py;
+      const dist = Math.hypot(dx, dy);
+
+      const danger = 140; // px radius
+      if(dist < danger){
+        // play sad trombone once, quiet
+        if(!sadPlayed){
+          sadPlayed = true;
+          safePlay(audio.sad);
+        }
+
+        const force = (danger - dist) / danger; // 0..1
+        const push = 220 * force;
+
+        const angle = Math.atan2(dy, dx);
+        noTX += Math.cos(angle) * push;
+        noTY += Math.sin(angle) * push;
+
+        // keep within viewport-ish
+        noTX = clamp(noTX, -260, 260);
+        noTY = clamp(noTY, -180, 180);
+      }
+    }
+
+    // Only repel while final screen is active
+    document.addEventListener('pointermove', (e) => {
+      if(current !== 'final') return;
+      repelFromPointer(e.clientX, e.clientY);
+    });
+
+    // Also prevent any click/tap from landing
+    noBtn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // give it an extra shove
+      repelFromPointer(e.clientX, e.clientY);
+    });
+
+    // YES click => celebration
+    yesBtn.addEventListener('mouseenter', () => {
+      // sparkle burst feel (light)
+      safePlay(audio.sparkle, {restart:false});
+    });
+
+    // ========= YAY Celebration — confetti + shake + floaters =========
+    const confettiCanvas = $('#confettiCanvas');
+    const ctx = confettiCanvas.getContext('2d');
+
+    function fitCanvas(){
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      confettiCanvas.width = Math.floor(window.innerWidth * dpr);
+      confettiCanvas.height = Math.floor(window.innerHeight * dpr);
+      confettiCanvas.style.width = window.innerWidth + 'px';
+      confettiCanvas.style.height = window.innerHeight + 'px';
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    window.addEventListener('resize', fitCanvas);
+    fitCanvas();
+
+    let confetti = [];
+    function spawnConfetti(amount=140){
+      confetti = [];
+      const shapes = ['rect','rect','rect','circle'];
+      for(let i=0;i<amount;i++){
+        confetti.push({
+          x: Math.random()*window.innerWidth,
+          y: -20 - Math.random()*window.innerHeight*0.2,
+          vx: (Math.random()*2 - 1) * 2.4,
+          vy: 2.6 + Math.random()*3.4,
+          w: 6 + Math.random()*8,
+          h: 8 + Math.random()*12,
+          rot: Math.random()*Math.PI,
+          vr: (Math.random()*2 - 1) * 0.18,
+          alpha: 0.7 + Math.random()*0.3,
+          shape: shapes[(Math.random()*shapes.length)|0],
+        });
+      }
+    }
+
+    function drawConfetti(){
+      ctx.clearRect(0,0,window.innerWidth, window.innerHeight);
+      for(const c of confetti){
+        c.x += c.vx;
+        c.y += c.vy;
+        c.rot += c.vr;
+
+        // gentle air drag + sway
+        c.vx *= 0.995;
+        c.vx += Math.sin(c.y*0.01) * 0.02;
+
+        if(c.y > window.innerHeight + 40){
+          c.y = -20;
+          c.x = Math.random()*window.innerWidth;
+        }
+
+        ctx.save();
+        ctx.globalAlpha = c.alpha;
+        ctx.translate(c.x, c.y);
+        ctx.rotate(c.rot);
+
+        // no fixed colors requirement: we won't set specific colors; use white-ish with varying alpha
+        // (still looks festive against the gradient + glow)
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+
+        if(c.shape === 'circle'){
+          ctx.beginPath();
+          ctx.arc(0,0, c.w*0.45, 0, Math.PI*2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-c.w/2, -c.h/2, c.w, c.h);
+        }
+
+        ctx.restore();
+      }
+      requestAnimationFrame(drawConfetti);
+    }
+
+    function addYayFloaters(){
+      const icons = ['💖','🐱','🌸','✨','🌷','😽','🎀','🐾'];
+      for(let i=0;i<18;i++){
+        const el = document.createElement('div');
+        el.className = 'floater';
+        el.textContent = icons[(Math.random()*icons.length)|0];
+
+        el.style.setProperty('--x', (Math.random()*100) + 'vw');
+        el.style.setProperty('--drift', (Math.random()*320 - 160) + 'px');
+        el.style.animationDuration = (4.4 + Math.random()*3.8) + 's';
+        el.style.fontSize = (18 + Math.random()*18) + 'px';
+        el.style.opacity = (0.65 + Math.random()*0.30).toFixed(2);
+
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 9000);
+      }
+    }
+
+    function microShake(){
+      const el = $('#yay .panel');
+      const t0 = performance.now();
+      const duration = 520;
+      const strength = 4.5;
+      const tick = () => {
+        const k = clamp((performance.now() - t0)/duration, 0, 1);
+        const fade = (1 - k);
+        const dx = (Math.random()*2 - 1) * strength * fade;
+        const dy = (Math.random()*2 - 1) * strength * fade;
+        el.style.transform = `translate3d(${dx}px, ${dy}px, 0)`;
+        if(k < 1) requestAnimationFrame(tick);
+        else el.style.transform = '';
+      };
+      requestAnimationFrame(tick);
+    }
+
+    function goYay(){
+      showScreen('yay');
+      safePlay(audio.celebration);
+      spawnConfetti(160);
+      requestAnimationFrame(drawConfetti);
+      addYayFloaters();
+      microShake();
+
+      // keep a gentle happy ambience after peak
+      if(soundOn){
+        const base = 0.28;
+        audio.bg.volume = base + 0.06;
+        setTimeout(() => { if(soundOn) audio.bg.volume = base; }, 1200);
+      }
+    }
+
+    yesBtn.addEventListener('click', () => {
+      // sparkle + immediate celebration
+      safePlay(audio.chime);
+      heartsBurst(18);
+      goYay();
+    });
+
+    // ========= Small UX polish =========
+    // If user reaches final after other path, reset NO button state a bit
+    const originalShowScreen = showScreen;
+    showScreen = function(id){
+      originalShowScreen(id);
+      if(id === 'final'){
+        // reset NO position each time final appears
+        noTX = 0; noTY = 0;
+        sadPlayed = false;
+      }
+      if(id === 'screen2'){
+        // airy ambience: slight sparkle/chime feeling
+        safePlay(audio.chime, {restart:false});
+      }
+    }
+  </script>
+
+  <!--
+    NOTE:
+    Modern browsers block autoplay audio until user interaction.
+    This app starts background music on first tap/click/keypress.
+  -->
+</body>
+</html>
